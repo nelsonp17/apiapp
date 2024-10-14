@@ -1,0 +1,20 @@
+services:
+  go-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    ports:
+      - "5612:8080"
+    depends_on:
+      - postgres
+    command: bash -c "npm run dev"
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"
