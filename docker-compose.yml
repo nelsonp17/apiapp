@@ -1,20 +1,63 @@
-services:
-  go-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    volumes:
-      - .:/app
-    ports:
-      - "5612:8080"
-    depends_on:
-      - postgres
-    command: bash -c "npm run dev"
+volumes:
+    mysql_data:
+        driver: local
+    phpmyadmin_data:
+        driver: local
 
-  postgres:
-    image: postgres:latest
-    environment:
-      POSTGRES_PASSWORD: mysecretpassword
-      POSTGRES_DB: mydatabase
-    ports:
-      - "5432:5432"
+networks:
+    api_network:
+        driver: bridge
+
+services:
+    php-fpm:
+        image: php8-centerapi:latest
+        container_name: php8-centerapi
+        ports:
+            - "9003:9000"  # Exponemos el puerto PHP-FPM para depuración
+        volumes:
+            - .:/var/www/html
+        networks:
+            - api_network
+    nginx:
+        container_name: nginx-centerapi
+        image: nginx-centerapi:latest
+        restart: always
+        ports:
+            - "8085:80"
+        volumes:
+            - .:/var/www/html
+        depends_on:
+            - php-fpm
+        networks:
+            - api_network
+    db_mysql:
+        container_name: mariadb-centerapi
+        image: mariadb:10.3
+        restart: always
+        ports:
+            - "3306:3306"
+        environment:
+            MYSQL_DATABASE: 'centerapi'
+            MYSQL_USER: 'centerapi'
+            MYSQL_ALLOW_EMPTY_PASSWORD: 1
+            MYSQL_PASSWORD: 'centerapi'
+            MYSQL_ROOT_PASSWORD: '1234'
+            MYSQL_ROOT_HOST: "%"
+        networks:
+            - api_network
+        volumes:
+            - mysql_data:/var/lib/mysql
+
+    phpmyadmin:
+        image: phpmyadmin
+        restart: always
+        ports:
+            - "8080:80"
+        environment:
+            PMA_ARBITRARY: 1
+            PMA_USER: "root"
+            PMA_PASSWORD: "1234"
+            PMA_HOST: db_mysql
+
+        networks:
+            - api_network
